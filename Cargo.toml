@@ -1,0 +1,31 @@
+[package]
+name = "oxxy"
+description = "A Loki Proxy written in rust with pluggable auth backends (and friends)"
+authors = ["Gabe <gmp@gmp.io>"]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3"
+keywords = ["loki", "proxy"]
+categories = ["command-line-interface", "command-line-utilities", "network-programming"]
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.7.5"
+http = "1.1.0"
+serde = { version = "1.0.204", features = ["derive"] }
+tokio = { version = "1.39", features = ["rt", "macros", "rt-multi-thread"] }
+tracing-subscriber = "0.3.18"
+hyper = "1.4.1"
+tower = "0.4.13"
+tracing = "0.1.40"
+hyper-util = { version = "0.1.7", features = ["client", "client-legacy"] }
+clap = { version = "4.4", features = ["derive"] }
+clap_derive = { version = "4.4" }
+env_logger = "0.11.5"
+
+[[bin]]
+name = "loxxy"
+src = "src/loxxy/main.rs"
+path = "src/loxxy/main.rs"
