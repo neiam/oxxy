@@ -1,0 +1,13 @@
+version: "2"
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto_oxxy
+    ports:
+      - 1883:1883
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq_oxxy
+    ports:
+      - 5674:5672
+      - 15674:15672
