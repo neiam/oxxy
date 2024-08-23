@@ -1,5 +1,19 @@
 # *OXXY
 
+A family of tools to move and proxy log data over various transports with the eventual goal of putting them into Loki
+
+- Loxxy, A loki HTTP proxy that can
+  - only deal with authentication
+  - publish log data over rabbitmq / mqtt
+- Moxxy and Roxxy, A pair of tools to pull data out of rabbitmq queues and mqtt topics
+- Toxxy, a test data provider for publishing test logs to mqtt and rabbitmq
+
+## Some Configurations
+
+- Loxxy in your cloud, authenticating logs
+- Loxxy on your edge, pushing logs into mqtt topics, Moxxy in your cloud, pushing them to loki
+- Loxxy on your edge, pushing logs into mqtt (backed by rabbitmq), Roxxy in your cloud, pushing them to loki
+
 ## LOXXY
 
 An Authenticated Loki Proxy with configurable transport backends
@@ -31,12 +45,8 @@ a tester program that publishes either json or protobuf messages across various 
 
 ## DOXXY
 
-A user database
+A userauth database
 
 ## BOXXY
-
-Packages log data
-
-## FOXXY
 
 A Rust logger facade that ships mqtt messages
