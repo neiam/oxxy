@@ -28,7 +28,6 @@ env_logger = "0.11.5"
 lapin = { version = "2.5.0", features = ["codegen"] }
 log = "0.4.22"
 anyhow = "1.0.86"
-reqwest = "0.12.7"
 async-std = { version = "1", features = ["attributes", "tokio1"] }
 http-body-util = "0.1.2"
 paho-mqtt = "0.12.5"
