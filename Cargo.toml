@@ -36,20 +36,16 @@ futures-lite = "2.3.0"
 
 [[bin]]
 name = "loxxy"
-src = "src/loxxy/main.rs"
 path = "src/loxxy/main.rs"
 
 [[bin]]
 name = "moxxy"
-src = "src/moxxy/main.rs"
 path = "src/moxxy/main.rs"
 
 [[bin]]
 name = "roxxy"
-src = "src/roxxy/main.rs"
 path = "src/roxxy/main.rs"
 
 [[bin]]
 name = "toxxy"
-src = "src/toxxy/main.rs"
 path = "src/toxxy/main.rs"
