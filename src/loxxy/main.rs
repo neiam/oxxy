@@ -1,4 +1,3 @@
-use anyhow::Error;
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -15,12 +14,12 @@ use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
 use lapin::types::FieldTable;
 use lapin::{BasicProperties, Channel, Connection, ConnectionProperties, ExchangeKind};
-use log::warn;
+
 use oxxy::shapes::Client;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
 use std::process::exit;
-use std::time::SystemTime;
+
 use tracing::{debug, info};
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -123,8 +122,8 @@ async fn main() -> std::io::Result<()> {
         Commands::AMQP {
             rmq_uri,
             exchange,
-            queue,
-            routing_key,
+            queue: _,
+            routing_key: _,
         } => {
             let options = ConnectionProperties::default();
             let connection = Connection::connect(rmq_uri, options).await.unwrap();
@@ -145,14 +144,14 @@ async fn main() -> std::io::Result<()> {
             mqtt_uri,
             user,
             token,
-            topic,
-            qos,
+            topic: _,
+            qos: _,
         } => {
             let create_opts = mqtt::CreateOptionsBuilder::new()
                 .server_uri(mqtt_uri)
                 .client_id("oxxy-toxxy") // Set a client ID for your connection
                 .finalize();
-            let mut cli = mqtt::AsyncClient::new(create_opts)?;
+            let cli = mqtt::AsyncClient::new(create_opts)?;
 
             let conn_opts = match (user, token) {
                 (Some(user), Some(token)) => {
@@ -220,13 +219,13 @@ async fn handler_http(
     }
 }
 
-async fn handler_amqp(State(state): State<Statey>, mut body: Body) -> Result<Response, StatusCode> {
+async fn handler_amqp(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
     match &state.args.cmd {
         Commands::AMQP {
-            rmq_uri,
+            rmq_uri: _,
             exchange,
             queue,
-            routing_key,
+            routing_key: _,
         } => {
             let bodydata = body.collect().await.unwrap().to_bytes();
             debug!("{:?}", bodydata);
@@ -248,20 +247,20 @@ async fn handler_amqp(State(state): State<Statey>, mut body: Body) -> Result<Res
     Ok(Default::default())
 }
 
-async fn handler_mqtt(State(state): State<Statey>, mut body: Body) -> Result<Response, StatusCode> {
+async fn handler_mqtt(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
     match &state.args.cmd {
         Commands::MQTT {
-            mqtt_uri,
-            user,
-            token,
+            mqtt_uri: _,
+            user: _,
+            token: _,
             topic,
-            qos,
+            qos: _,
         } => {
             let bodydata = body.collect().await.unwrap().to_bytes();
             debug!("{:?}", bodydata);
             let cli = &state.mqtt.clone().unwrap();
             let msg: Message = Message::new(topic, bodydata, 0);
-            cli.publish(msg).await;
+            let _ = cli.publish(msg).await;
         }
         _ => {}
     }

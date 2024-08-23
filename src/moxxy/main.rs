@@ -1,25 +1,23 @@
 use axum::body::Body;
 use axum::extract::Request;
 use axum::response::IntoResponse;
-use clap::Command;
+
 use clap::Parser;
-use clap_derive::Subcommand;
-use futures_lite::stream::StreamExt;
+
+
 use http::{Method, StatusCode};
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
-use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
-use lapin::types::FieldTable;
-use lapin::{BasicProperties, Connection, ConnectionProperties, ExchangeKind};
-use log::{debug, error, info, warn};
+
+
+use log::{debug, error, info};
 use oxxy::shapes::{Client, LogMessage};
 use paho_mqtt as mqtt;
-use paho_mqtt::Message;
-use std::error::Error;
-use std::io::Read;
+
+
 use std::sync::Arc;
-use std::thread;
-use std::thread::sleep;
+
+
 use std::time::Duration;
 use tokio::sync::mpsc;
 
@@ -53,7 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .server_uri(&args.mqtt_uri)
         .client_id("oxxy-moxxy") // Set a client ID for your connection
         .finalize();
-    let mut cli = mqtt::AsyncClient::new(create_opts)?;
+    let cli = mqtt::AsyncClient::new(create_opts)?;
 
     let conn_opts = match (&args.user, &args.token) {
         (Some(user), Some(token)) => {
@@ -84,7 +82,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let rt_handle = tokio::runtime::Handle::current();
 
-    cli.set_message_callback(move |cli, msg| {
+    cli.set_message_callback(move |_cli, msg| {
         let tx = Arc::clone(&tx);
         if let Some(msg) = msg {
             // let topic = msg.topic().to_string();
@@ -125,7 +123,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 .uri(args.loki_uri.as_str())
                 .body(Body::from(payload_))
                 .expect("Request builder error");
-            let resp = client
+            let _resp = client
                 .request(req.into())
                 .await
                 .map_err(|_| StatusCode::BAD_REQUEST)
@@ -136,5 +134,4 @@ async fn main() -> Result<(), anyhow::Error> {
     loop {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
-    Ok(())
 }

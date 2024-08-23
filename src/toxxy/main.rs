@@ -1,4 +1,3 @@
-use clap::Command;
 use clap::Parser;
 use clap_derive::Subcommand;
 use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
@@ -7,12 +6,11 @@ use lapin::{BasicProperties, Channel, Connection, ConnectionProperties, Exchange
 use log::info;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
-use std::collections::BTreeMap;
-use std::error::Error;
-use std::thread::sleep;
+
+
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const logdataj: &str = r#"{
+const LOGDATAJ: &str = r#"{
   "streams": [
     {
       "stream": {
@@ -35,12 +33,7 @@ const logdataj: &str = r#"{
   ]
 }"#;
 
-const logdatam: &str = r#"\x80\x05\xf0\xc2\n\xfd\x04\nG{hostname="boomer", job="systemd-journal", unit="rtkit-daemon.service"}\x12@\n\x0c\x08\xe1\xfe\x9d\xb6\x06\x10\xe0\xd9\x83\xb4\x01\x120Supervising 4 threads of 4 processes of 1 users.\x12@\n\x0c\x08\xe1\xfe\x9d\xb6\x06\x10\xf0\x97\xb3\xb4\x01\x120Supervising 4 threads of 4 processe\x05Q\x001FB\x00\x10\xd8\xd4\x85\xf2\x02\xf2\x84\x00\x08\x80\xdb\xc4\xfaB\x00\x0c\x88\xe7\xbb\xf8\xf6\x84\x00\x0c\xd8\x82\xb5\xf9\xceB\x00\x04d\n1J\xa8\xc8\x9c\x83\x8c\x03\x12TSuccessfully made thread 464465 of p)\x94\xa8 463880 owned by \'1000\' RT at priority 10.\x129\xf2\x10\xa8\xf6\xae\x8c\x036n\x01\x005\rb%\xa1\x005\x11^4es of 1 users."#;
-
-struct RoughShape {
-    stream: BTreeMap<String, String>,
-    values: Vec<Vec<String>>,
-}
+// const LOGDATAM: &str = r#"\x80\x05\xf0\xc2\n\xfd\x04\nG{hostname="boomer", job="systemd-journal", unit="rtkit-daemon.service"}\x12@\n\x0c\x08\xe1\xfe\x9d\xb6\x06\x10\xe0\xd9\x83\xb4\x01\x120Supervising 4 threads of 4 processes of 1 users.\x12@\n\x0c\x08\xe1\xfe\x9d\xb6\x06\x10\xf0\x97\xb3\xb4\x01\x120Supervising 4 threads of 4 processe\x05Q\x001FB\x00\x10\xd8\xd4\x85\xf2\x02\xf2\x84\x00\x08\x80\xdb\xc4\xfaB\x00\x0c\x88\xe7\xbb\xf8\xf6\x84\x00\x0c\xd8\x82\xb5\xf9\xceB\x00\x04d\n1J\xa8\xc8\x9c\x83\x8c\x03\x12TSuccessfully made thread 464465 of p)\x94\xa8 463880 owned by \'1000\' RT at priority 10.\x129\xf2\x10\xa8\xf6\xae\x8c\x036n\x01\x005\rb%\xa1\x005\x11^4es of 1 users."#;
 
 #[derive(Clone, Debug, Subcommand)]
 enum Commands {
@@ -111,7 +104,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 .server_uri(mqtt_uri)
                 .client_id("oxxy-toxxy") // Set a client ID for your connection
                 .finalize();
-            let mut cli = mqtt::AsyncClient::new(create_opts)?;
+            let cli = mqtt::AsyncClient::new(create_opts)?;
 
             let conn_opts = match (user, token) {
                 (Some(user), Some(token)) => {
@@ -136,9 +129,9 @@ async fn main() -> Result<(), anyhow::Error> {
         info!("Publishing test message w/ {:?}", &args.cmd);
         match &args.cmd {
             Commands::AMQP {
-                rmq_uri,
+                rmq_uri: _,
                 queue,
-                routing_key: tag,
+                routing_key: _tag,
                 exchange,
             } => {
                 let channel = &statey.amqp.clone().unwrap();
@@ -157,7 +150,7 @@ async fn main() -> Result<(), anyhow::Error> {
                         exchange,
                         queue,
                         BasicPublishOptions::default(),
-                        logdataj
+                        LOGDATAJ
                             .replace(
                                 "$TS$",
                                 now.duration_since(UNIX_EPOCH)?
@@ -174,16 +167,16 @@ async fn main() -> Result<(), anyhow::Error> {
                     .unwrap();
             }
             Commands::Mqtt {
-                mqtt_uri,
-                user,
-                token,
+                mqtt_uri: _,
+                user: _,
+                token: _,
                 topic,
-                qos,
+                qos: _,
             } => {
                 let cli = &statey.mqtt.clone().unwrap();
                 let now = SystemTime::now();
                 let ts = &now.duration_since(UNIX_EPOCH)?.as_nanos().to_string();
-                let payload = logdataj.replace("$TS$", &ts);
+                let payload = LOGDATAJ.replace("$TS$", &ts);
                 let msg: Message = Message::new(topic, payload, 0);
                 cli.publish(msg).await?;
                 ()

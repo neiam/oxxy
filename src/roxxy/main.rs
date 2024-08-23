@@ -1,27 +1,22 @@
 use axum::{
     body::Body,
-    extract::{Request, State},
-    http::uri::Uri,
-    response::{IntoResponse, Response},
-    routing::post,
-    Router,
+    extract::Request,
+    response::IntoResponse,
 };
 use clap::Parser;
-use clap_derive::ValueEnum;
+
 use http::Method;
-use http_body_util::BodyExt;
 use hyper::StatusCode;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use lapin::options::{ExchangeDeclareOptions, QueueBindOptions};
 use lapin::{
     message::DeliveryResult,
-    options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions, QueueDeclareOptions},
-    types::FieldTable,
-    BasicProperties, Connection, ConnectionProperties, ExchangeKind,
+    options::{BasicAckOptions, BasicConsumeOptions, QueueDeclareOptions},
+    types::FieldTable, Connection, ConnectionProperties, ExchangeKind,
 };
-use log::{debug, info, warn};
+use log::debug;
 use oxxy::shapes::{Client, LogMessage};
-use std::process::exit;
+
 use std::sync::Arc;
 
 #[derive(Parser, Debug, Clone)]
@@ -142,7 +137,7 @@ async fn main() -> Result<(), anyhow::Error> {
                         .uri(loki_url_.as_str())
                         .body(Body::from(message))
                         .expect("Request builder error");
-                    let resp = client
+                    let _resp = client
                         .request(req.into())
                         .await
                         .map_err(|_| StatusCode::BAD_REQUEST)
@@ -173,7 +168,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     .uri(loki_url_.as_str())
                     .body(Body::from(payload_))
                     .expect("Request builder error");
-                let resp = client
+                let _resp = client
                     .request(req.into())
                     .await
                     .map_err(|_| StatusCode::BAD_REQUEST)
@@ -183,7 +178,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
             // Do something with the delivery data (The message payload)
 
-            &delivery
+            let _ = &delivery
                 .ack(BasicAckOptions::default())
                 .await
                 .expect("Failed to ack send_webhook_event message");
