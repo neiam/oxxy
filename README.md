@@ -14,6 +14,10 @@ A family of tools to move and proxy log data over various transports with the ev
 - Loxxy on your edge, pushing logs into mqtt topics, Moxxy in your cloud, pushing them to loki
 - Loxxy on your edge, pushing logs into mqtt (backed by rabbitmq), Roxxy in your cloud, pushing them to loki
 
+## Inspired By
+
+- https://github.com/k8spin/loki-multi-tenant-proxy
+
 ## LOXXY
 
 An Authenticated Loki Proxy with configurable transport backends

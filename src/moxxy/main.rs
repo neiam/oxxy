@@ -106,7 +106,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     "application/json"
                 }
                 Err(e) => {
-                    debug!("Failed to deserialize log message: {}", e);
+                    debug!("Failed to deserialize log message as json: {}", e);
                     "application/x-protobuf"
                 }
             };

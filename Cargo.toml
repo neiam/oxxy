@@ -1,3 +1,4 @@
+workspace = { members = ["boxxy"] }
 [package]
 name = "oxxy"
 description = "A Loki Proxy written in rust with pluggable auth backends (and friends)"
@@ -12,7 +13,7 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.5"
+axum = "0.8.1"
 http = "1.1.0"
 serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0"
