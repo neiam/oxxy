@@ -4,19 +4,15 @@ use axum::response::IntoResponse;
 
 use clap::Parser;
 
-
 use http::{Method, StatusCode};
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
-
 
 use log::{debug, error, info};
 use oxxy::shapes::{Client, LogMessage};
 use paho_mqtt as mqtt;
 
-
 use std::sync::Arc;
-
 
 use std::time::Duration;
 use tokio::sync::mpsc;

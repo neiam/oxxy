@@ -7,7 +7,6 @@ use log::info;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
 
-
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const LOGDATAJ: &str = r#"{

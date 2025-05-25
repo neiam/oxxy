@@ -1,8 +1,4 @@
-use axum::{
-    body::Body,
-    extract::Request,
-    response::IntoResponse,
-};
+use axum::{body::Body, extract::Request, response::IntoResponse};
 use clap::Parser;
 
 use http::Method;
@@ -12,7 +8,8 @@ use lapin::options::{ExchangeDeclareOptions, QueueBindOptions};
 use lapin::{
     message::DeliveryResult,
     options::{BasicAckOptions, BasicConsumeOptions, QueueDeclareOptions},
-    types::FieldTable, Connection, ConnectionProperties, ExchangeKind,
+    types::FieldTable,
+    Connection, ConnectionProperties, ExchangeKind,
 };
 use log::debug;
 use oxxy::shapes::{Client, LogMessage};
