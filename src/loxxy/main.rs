@@ -113,7 +113,7 @@ async fn main() -> std::io::Result<()> {
     let argsc = args.clone();
     let mut state = Statey {
         args: argsc,
-        client: client,
+        client,
         amqp: None,
         mqtt: None,
     };

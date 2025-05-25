@@ -48,7 +48,7 @@ enum Commands {
         #[arg(short, long, default_value = "0")]
         qos: usize,
     },
-    AMQP {
+    Amqp {
         #[clap(short, long)]
         rmq_uri: String,
 
@@ -87,7 +87,7 @@ async fn main() -> Result<(), anyhow::Error> {
         mqtt: None,
     };
     match &args.cmd {
-        Commands::AMQP { rmq_uri, .. } => {
+        Commands::Amqp { rmq_uri, .. } => {
             let options = ConnectionProperties::default();
             let connection = Connection::connect(rmq_uri, options).await.unwrap();
             let channel = connection.create_channel().await.unwrap();
@@ -127,7 +127,7 @@ async fn main() -> Result<(), anyhow::Error> {
     loop {
         info!("Publishing test message w/ {:?}", &args.cmd);
         match &args.cmd {
-            Commands::AMQP {
+            Commands::Amqp {
                 rmq_uri: _,
                 queue,
                 routing_key: _tag,
@@ -175,10 +175,9 @@ async fn main() -> Result<(), anyhow::Error> {
                 let cli = &statey.mqtt.clone().unwrap();
                 let now = SystemTime::now();
                 let ts = &now.duration_since(UNIX_EPOCH)?.as_nanos().to_string();
-                let payload = LOGDATAJ.replace("$TS$", &ts);
+                let payload = LOGDATAJ.replace("$TS$", ts);
                 let msg: Message = Message::new(topic, payload, 0);
                 cli.publish(msg).await?;
-                ()
             }
         }
         info!("{}", args.freq);

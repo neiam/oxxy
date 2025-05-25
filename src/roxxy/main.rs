@@ -135,7 +135,7 @@ async fn main() -> Result<(), anyhow::Error> {
                         .body(Body::from(message))
                         .expect("Request builder error");
                     let _resp = client
-                        .request(req.into())
+                        .request(req)
                         .await
                         .map_err(|_| StatusCode::BAD_REQUEST)
                         .expect("bad req")
@@ -166,7 +166,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     .body(Body::from(payload_))
                     .expect("Request builder error");
                 let _resp = client
-                    .request(req.into())
+                    .request(req)
                     .await
                     .map_err(|_| StatusCode::BAD_REQUEST)
                     .expect("bad req")
