@@ -36,7 +36,7 @@ const LOGDATAJ: &str = r#"{
 
 #[derive(Clone, Debug, Subcommand)]
 enum Commands {
-    Mqtt {
+    MQTT {
         #[clap(short, long)]
         mqtt_uri: String,
         #[arg(short, long)]
@@ -48,7 +48,7 @@ enum Commands {
         #[arg(short, long, default_value = "0")]
         qos: usize,
     },
-    Amqp {
+    AMQP {
         #[clap(short, long)]
         rmq_uri: String,
 
@@ -87,13 +87,13 @@ async fn main() -> Result<(), anyhow::Error> {
         mqtt: None,
     };
     match &args.cmd {
-        Commands::Amqp { rmq_uri, .. } => {
+        Commands::AMQP { rmq_uri, .. } => {
             let options = ConnectionProperties::default();
             let connection = Connection::connect(rmq_uri, options).await.unwrap();
             let channel = connection.create_channel().await.unwrap();
             statey.amqp = Some(channel);
         }
-        Commands::Mqtt {
+        Commands::MQTT {
             mqtt_uri,
             user,
             token,
@@ -127,7 +127,7 @@ async fn main() -> Result<(), anyhow::Error> {
     loop {
         info!("Publishing test message w/ {:?}", &args.cmd);
         match &args.cmd {
-            Commands::Amqp {
+            Commands::AMQP {
                 rmq_uri: _,
                 queue,
                 routing_key: _tag,
@@ -165,7 +165,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     .await
                     .unwrap();
             }
-            Commands::Mqtt {
+            Commands::MQTT {
                 mqtt_uri: _,
                 user: _,
                 token: _,

@@ -123,6 +123,7 @@ async fn main() -> Result<(), anyhow::Error> {
                         false
                     }
                 };
+                #[allow(clippy::nonminimal_bool)]
                 if (messagey && args.strict) || !args.strict {
                     let client: Client =
                         hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())

@@ -130,7 +130,7 @@ async fn main() -> std::io::Result<()> {
             let channel = connection.create_channel().await.unwrap();
             channel
                 .exchange_declare(
-                    &exchange,                         // exchange name
+                    exchange,                         // exchange name
                     ExchangeKind::Direct,              // type of exchange
                     ExchangeDeclareOptions::default(), // default options
                     FieldTable::default(),             // no extra parameters
@@ -220,49 +220,43 @@ async fn handler_http(
 }
 
 async fn handler_amqp(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
-    match &state.args.cmd {
-        Commands::AMQP {
+    if let Commands::AMQP {
             rmq_uri: _,
             exchange,
             queue,
             routing_key: _,
-        } => {
-            let bodydata = body.collect().await.unwrap().to_bytes();
-            debug!("{:?}", bodydata);
-            let channel = state.amqp.unwrap();
-            channel
-                .basic_publish(
-                    exchange,
-                    queue,
-                    BasicPublishOptions::default(),
-                    &bodydata,
-                    BasicProperties::default(),
-                )
-                .await
-                .expect("");
-        }
-        _ => {}
+    } = &state.args.cmd {
+        let bodydata = body.collect().await.unwrap().to_bytes();
+        debug!("{:?}", bodydata);
+        let channel = state.amqp.unwrap();
+        channel
+            .basic_publish(
+                exchange,
+                queue,
+                BasicPublishOptions::default(),
+                &bodydata,
+                BasicProperties::default(),
+            )
+            .await
+            .expect("");
     }
 
     Ok(Default::default())
 }
 
 async fn handler_mqtt(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
-    match &state.args.cmd {
-        Commands::MQTT {
+    if let Commands::MQTT {
             mqtt_uri: _,
             user: _,
             token: _,
             topic,
             qos: _,
-        } => {
-            let bodydata = body.collect().await.unwrap().to_bytes();
-            debug!("{:?}", bodydata);
-            let cli = &state.mqtt.clone().unwrap();
-            let msg: Message = Message::new(topic, bodydata, 0);
-            let _ = cli.publish(msg).await;
-        }
-        _ => {}
+    } = &state.args.cmd {
+        let bodydata = body.collect().await.unwrap().to_bytes();
+        debug!("{:?}", bodydata);
+        let cli = &state.mqtt.clone().unwrap();
+        let msg: Message = Message::new(topic, bodydata, 0);
+        let _ = cli.publish(msg).await;
     }
 
     Ok(Default::default())

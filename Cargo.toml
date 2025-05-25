@@ -49,3 +49,6 @@ path = "src/roxxy/main.rs"
 [[bin]]
 name = "toxxy"
 path = "src/toxxy/main.rs"
+
+[lints.clippy]
+upper_case_acronyms = "allow"
