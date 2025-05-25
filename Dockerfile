@@ -1,8 +1,11 @@
 # Use the official Rust image as a parent image
-FROM rust:1.75 as builder
+FROM rust:1.86 as builder
 
 # Set the working directory in the container
 WORKDIR /usr/src/oxxy
+
+# for paho
+RUN apt-get update && apt-get install -y cmake
 
 # Copy the entire project
 COPY . .
