@@ -1,4 +1,4 @@
-workspace = { members = ["boxxy"] }
+#workspace = { members = ["boxxy"] }
 [package]
 name = "oxxy"
 description = "A Loki Proxy written in rust with pluggable auth backends (and friends)"
