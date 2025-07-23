@@ -7,6 +7,7 @@ A family of tools to move and proxy log data over various transports with the ev
   - publish log data over rabbitmq / mqtt
 - Moxxy and Roxxy, A pair of tools to pull data out of rabbitmq queues and mqtt topics
 - Toxxy, a test data provider for publishing test logs to mqtt and rabbitmq
+- Ioxxy, an Iroh Coordinator for receiving and forwarding logs
 
 ## Some Configurations
 
@@ -32,6 +33,7 @@ Backends:
 - Basic HTTP Proxy
 - MQTT Publisher
 - AMQP Publisher
+- Iroh
 
 ## MOXXY
 
@@ -54,3 +56,11 @@ A userauth database
 ## BOXXY
 
 A Rust logger facade that ships mqtt messages
+
+
+
+### IOXXY
+
+Your logs, shipped over p2p
+
+- We have a coordinator that spawns persistent pubkeys to pass into clients, clients spawn Loxxy in Iroh Mode

@@ -31,12 +31,20 @@ log = "0.4.22"
 anyhow = "1.0.86"
 async-std = { version = "1", features = ["attributes", "tokio1"] }
 http-body-util = "0.1.2"
-paho-mqtt = "0.12.5"
+paho-mqtt = "0.13.3"
 futures-lite = "2.3.0"
+iroh = { version = "0.35.0", optional = true, features = ["discovery-local-network"] }
+iroh-blobs = { version = "0.35.0" , optional = true}
+rand = "0.8.5"
+
+[features]
+default = ["iroh-support"]
+iroh-support = ["iroh", "iroh-blobs"]
 
 [[bin]]
 name = "loxxy"
 path = "src/loxxy/main.rs"
+required-features = ["iroh-support"]
 
 [[bin]]
 name = "moxxy"
@@ -49,6 +57,14 @@ path = "src/roxxy/main.rs"
 [[bin]]
 name = "toxxy"
 path = "src/toxxy/main.rs"
+
+[[bin]]
+name = "ioxxy"
+path = "src/ioxxy/main.rs"
+
+[[bin]]
+name = "ioxxy-ctl"
+path = "src/ioxxy/ctl.rs"
 
 [lints.clippy]
 upper_case_acronyms = "allow"

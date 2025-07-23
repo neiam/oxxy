@@ -4,7 +4,7 @@ use axum::{
     http::uri::Uri,
     response::{IntoResponse, Response},
     routing::post,
-    Router,
+    Router as AxumRouter,
 };
 use clap::Parser;
 use clap_derive::{Subcommand, ValueEnum};
@@ -19,8 +19,21 @@ use oxxy::shapes::Client;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
 use std::process::exit;
-
+use std::sync::{Arc, Mutex};
+use anyhow::Context;
 use tracing::{debug, info};
+
+#[cfg(feature = "iroh-support")]
+use iroh::Endpoint;
+use iroh::protocol::Router;
+use iroh::{NodeAddr, SecretKey};
+use iroh::endpoint::SendStream;
+#[cfg(feature = "iroh-support")]
+use iroh_blobs::net_protocol::Blobs;
+use oxxy::EXAMPLE_ALPN;
+// #[cfg(feature = "iroh-support")]
+
+
 
 #[derive(Debug, Clone, ValueEnum)]
 enum Authentication {
@@ -61,6 +74,13 @@ enum Commands {
         #[arg(short, long, default_value = "0")]
         qos: usize,
     },
+    #[cfg(feature = "iroh-support")]
+    IROH {
+        #[arg(short, long)]
+        node_id: iroh::NodeId,
+        // #[arg(short, long)]
+        // topic: String,
+    },
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -85,10 +105,12 @@ pub struct Statey {
     client: Client,
     amqp: Option<Channel>,
     mqtt: Option<mqtt::AsyncClient>,
+    #[cfg(feature = "iroh-support")]
+    iroh: Option<Arc<Mutex<SendStream>>>,
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
     env_logger::init();
 
@@ -116,6 +138,8 @@ async fn main() -> std::io::Result<()> {
         client,
         amqp: None,
         mqtt: None,
+        #[cfg(feature = "iroh-support")]
+        iroh: None,
     };
     match &args.cmd {
         Commands::HTTP { .. } => {}
@@ -171,23 +195,91 @@ async fn main() -> std::io::Result<()> {
 
             state.mqtt = Some(cli)
         }
+        #[cfg(feature = "iroh-support")]
+        Commands::IROH { node_id: node_id } => {
+            let secret_key = SecretKey::generate(rand::rngs::OsRng);
+            println!("public key: {}", secret_key.public());
+
+            let endpoint = Endpoint::builder()
+                .secret_key(secret_key)
+                .alpns(vec![EXAMPLE_ALPN.to_vec()])
+                .discovery_local_network().discovery_n0().bind().await?;
+
+            let me = endpoint.node_id();
+            println!("node id: {me}");
+            println!("node listening addresses:");
+            for local_endpoint in endpoint
+                .direct_addresses()
+                .initialized()
+                .await
+                .context("no direct addresses")?
+            {
+                println!("\t{}", local_endpoint.addr)
+            }
+
+
+            let addr = NodeAddr::new(*node_id);
+
+            // Attempt to connect, over the given ALPN.
+            // Returns a Quinn connection.
+            let conn = endpoint.connect(addr, EXAMPLE_ALPN).await?;
+            println!("connected");
+
+            // Use the Quinn API to send and recv content.
+            let (mut send, mut recv) = conn.open_bi().await?;
+
+            let message = format!("{me} is saying 'hello!'");
+            send.write_all(message.as_bytes()).await?;
+
+            // Call `finish` to close the send side of the connection gracefully.
+            send.finish()?;
+            let message = recv.read_to_end(100).await?;
+            let message = String::from_utf8(message)?;
+            println!("received: {message}");
+
+            state.iroh = Some(Arc::new(Mutex::new(send)))
+
+            // We received the last message: close all connections and allow for the close
+            // message to be sent.
+            // endpoint.close().await;
+
+
+
+
+            // let endpoint = Endpoint::builder().discovery_n0().bind().await?;
+            // // We initialize the Blobs protocol in-memory
+            // let blobs = Blobs::memory().build(&endpoint);
+            //
+            // // Now we build a router that accepts blobs connections & routes them
+            // // to the blobs protocol.
+            // let router = Router::builder(endpoint.clone())
+            //     .accept(iroh_blobs::ALPN, blobs.clone())
+            //     .spawn();
+            // info!("iroh client initialized");
+            // state.iroh = Some(endpoint);
+        }
     }
 
     let app = match &args.cmd {
-        Commands::HTTP { .. } => Router::new()
+        Commands::HTTP { .. } => AxumRouter::new()
             .route("/*0", post(handler_http))
             .with_state(state),
-        Commands::AMQP { .. } => Router::new()
+        Commands::AMQP { .. } => AxumRouter::new()
             .route("/*0", post(handler_amqp))
             .with_state(state),
-        Commands::MQTT { .. } => Router::new()
+        Commands::MQTT { .. } => AxumRouter::new()
             .route("/*0", post(handler_mqtt))
+            .with_state(state),
+        #[cfg(feature = "iroh-support")]
+        Commands::IROH { .. } => AxumRouter::new()
+            .route("/{*0}", post(handler_iroh))
             .with_state(state),
     };
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
     info!("Loxxy listening on {}", listener.local_addr()?);
-    axum::serve(listener, app).await
+    axum::serve(listener, app).await;
+    Ok(())
 }
 
 async fn handler_http(
@@ -259,6 +351,43 @@ async fn handler_mqtt(State(state): State<Statey>, body: Body) -> Result<Respons
         let cli = &state.mqtt.clone().unwrap();
         let msg: Message = Message::new(topic, bodydata, 0);
         let _ = cli.publish(msg).await;
+    }
+
+    Ok(Default::default())
+}
+
+#[cfg(feature = "iroh-support")]
+async fn handler_iroh(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
+    if let Commands::IROH { node_id: _} = &state.args.cmd {
+        let bodydata = body.collect().await.unwrap().to_bytes();
+        debug!("Iroh handler received data: {:?}", bodydata);
+        
+        // Here you would implement the actual iroh functionality
+        // This is a placeholder implementation
+        info!("Publishing to iroh: ");
+
+        match state.iroh {
+            None => {info!("no tunnel");}
+            Some(mut iroh) => {
+                let mut i = iroh.lock().unwrap();
+                let message = format!("ep is saying 'hello!'");
+                i.write_all(message.as_bytes()).await.expect("TODO: panic message");
+
+                // Call `finish` to close the send side of the connection gracefully.
+                i.finish().expect("TODO: panic message");
+                // let message = recv.read_to_end(100).await?;
+                // let message = String::from_utf8(message)?;
+                // println!("received: {message}");
+
+                // state.iroh = Some(Arc::new(send))
+            }
+        }
+
+        // iroh.
+        
+        // Example: You might want to publish the data to an iroh document or gossip topic
+        // let iroh_client = &state.iroh.clone().unwrap();
+        // Implement your iroh-specific logic here
     }
 
     Ok(Default::default())
