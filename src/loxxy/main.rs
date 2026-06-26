@@ -13,23 +13,21 @@ use hyper::StatusCode;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
 use lapin::types::FieldTable;
-use lapin::{BasicProperties, Channel, Connection, ConnectionProperties, ExchangeKind};
+use lapin::{BasicProperties, Channel, Connection as LapinConnection, ConnectionProperties, ExchangeKind};
 
 use oxxy::shapes::Client;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
 use std::process::exit;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use anyhow::Context;
 use tracing::{debug, info};
 
 #[cfg(feature = "iroh-support")]
 use iroh::Endpoint;
-use iroh::protocol::Router;
 use iroh::{NodeAddr, SecretKey};
-use iroh::endpoint::SendStream;
-#[cfg(feature = "iroh-support")]
-use iroh_blobs::net_protocol::Blobs;
+use iroh::endpoint::Connection;
 use oxxy::EXAMPLE_ALPN;
 // #[cfg(feature = "iroh-support")]
 
@@ -106,7 +104,7 @@ pub struct Statey {
     amqp: Option<Channel>,
     mqtt: Option<mqtt::AsyncClient>,
     #[cfg(feature = "iroh-support")]
-    iroh: Option<Arc<Mutex<SendStream>>>,
+    iroh: Option<Arc<Mutex<Connection>>>,
 }
 
 #[tokio::main]
@@ -150,7 +148,7 @@ async fn main() -> Result<(), anyhow::Error> {
             routing_key: _,
         } => {
             let options = ConnectionProperties::default();
-            let connection = Connection::connect(rmq_uri, options).await.unwrap();
+            let connection = LapinConnection::connect(rmq_uri, options).await.unwrap();
             let channel = connection.create_channel().await.unwrap();
             channel
                 .exchange_declare(
@@ -196,7 +194,7 @@ async fn main() -> Result<(), anyhow::Error> {
             state.mqtt = Some(cli)
         }
         #[cfg(feature = "iroh-support")]
-        Commands::IROH { node_id: node_id } => {
+        Commands::IROH { node_id } => {
             let secret_key = SecretKey::generate(rand::rngs::OsRng);
             println!("public key: {}", secret_key.public());
 
@@ -237,12 +235,11 @@ async fn main() -> Result<(), anyhow::Error> {
             let message = String::from_utf8(message)?;
             println!("received: {message}");
 
-            state.iroh = Some(Arc::new(Mutex::new(send)))
+            state.iroh = Some(Arc::new(Mutex::new(conn)));
 
             // We received the last message: close all connections and allow for the close
             // message to be sent.
             // endpoint.close().await;
-
 
 
 
@@ -278,7 +275,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
     info!("Loxxy listening on {}", listener.local_addr()?);
-    axum::serve(listener, app).await;
+    let _ = axum::serve(listener, app).await;
     Ok(())
 }
 
@@ -355,39 +352,77 @@ async fn handler_mqtt(State(state): State<Statey>, body: Body) -> Result<Respons
 
     Ok(Default::default())
 }
-
+#[axum::debug_handler]
 #[cfg(feature = "iroh-support")]
+
 async fn handler_iroh(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
     if let Commands::IROH { node_id: _} = &state.args.cmd {
         let bodydata = body.collect().await.unwrap().to_bytes();
         debug!("Iroh handler received data: {:?}", bodydata);
-        
-        // Here you would implement the actual iroh functionality
-        // This is a placeholder implementation
-        info!("Publishing to iroh: ");
 
-        match state.iroh {
-            None => {info!("no tunnel");}
-            Some(mut iroh) => {
-                let mut i = iroh.lock().unwrap();
+        info!("Publishing to iroh");
+
+        match &state.iroh {
+            None => {
+                info!("no tunnel");
+            }
+            Some(iroh) => {
+                let conn = iroh.lock().await;
+
+                let (mut send, mut recv) = match conn.open_bi().await {
+                    Ok((send, recv)) => (send, recv),
+                    Err(e) => {
+                        info!("Failed to open bi-directional stream: {}", e);
+                        return Ok(Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::empty())
+                            .unwrap());
+                    }
+                };
+
                 let message = format!("ep is saying 'hello!'");
-                i.write_all(message.as_bytes()).await.expect("TODO: panic message");
 
-                // Call `finish` to close the send side of the connection gracefully.
-                i.finish().expect("TODO: panic message");
-                // let message = recv.read_to_end(100).await?;
-                // let message = String::from_utf8(message)?;
-                // println!("received: {message}");
+                if let Err(e) = send.write_all(message.as_bytes()).await {
+                    info!("Failed to write to stream: {}", e);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap());
+                }
 
-                // state.iroh = Some(Arc::new(send))
+                if let Err(e) = send.finish() {
+                    info!("Failed to finish stream: {}", e);
+                    return Ok(Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap());
+                }
+
+                let message = match recv.read_to_end(100).await {
+                    Ok(data) => data,
+                    Err(e) => {
+                        info!("Failed to read from stream: {}", e);
+                        return Ok(Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::empty())
+                            .unwrap());
+                    }
+                };
+
+                let message = match String::from_utf8(message) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        info!("Failed to convert message to UTF-8: {}", e);
+                        return Ok(Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::empty())
+                            .unwrap());
+                    }
+                };
+                println!("received: {message}");
+                info!("Successfully sent data through iroh tunnel");
             }
         }
-
-        // iroh.
-        
-        // Example: You might want to publish the data to an iroh document or gossip topic
-        // let iroh_client = &state.iroh.clone().unwrap();
-        // Implement your iroh-specific logic here
     }
 
     Ok(Default::default())
