@@ -13,25 +13,25 @@ use hyper::StatusCode;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use lapin::options::{BasicPublishOptions, ExchangeDeclareOptions};
 use lapin::types::FieldTable;
-use lapin::{BasicProperties, Channel, Connection as LapinConnection, ConnectionProperties, ExchangeKind};
+use lapin::{
+    BasicProperties, Channel, Connection as LapinConnection, ConnectionProperties, ExchangeKind,
+};
 
+use anyhow::Context;
 use oxxy::shapes::Client;
 use paho_mqtt as mqtt;
 use paho_mqtt::Message;
 use std::process::exit;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use anyhow::Context;
 use tracing::{debug, info};
 
+use iroh::endpoint::Connection;
 #[cfg(feature = "iroh-support")]
 use iroh::Endpoint;
 use iroh::{NodeAddr, SecretKey};
-use iroh::endpoint::Connection;
 use oxxy::EXAMPLE_ALPN;
 // #[cfg(feature = "iroh-support")]
-
-
 
 #[derive(Debug, Clone, ValueEnum)]
 enum Authentication {
@@ -201,7 +201,10 @@ async fn main() -> Result<(), anyhow::Error> {
             let endpoint = Endpoint::builder()
                 .secret_key(secret_key)
                 .alpns(vec![EXAMPLE_ALPN.to_vec()])
-                .discovery_local_network().discovery_n0().bind().await?;
+                .discovery_local_network()
+                .discovery_n0()
+                .bind()
+                .await?;
 
             let me = endpoint.node_id();
             println!("node id: {me}");
@@ -214,7 +217,6 @@ async fn main() -> Result<(), anyhow::Error> {
             {
                 println!("\t{}", local_endpoint.addr)
             }
-
 
             let addr = NodeAddr::new(*node_id);
 
@@ -240,8 +242,6 @@ async fn main() -> Result<(), anyhow::Error> {
             // We received the last message: close all connections and allow for the close
             // message to be sent.
             // endpoint.close().await;
-
-
 
             // let endpoint = Endpoint::builder().discovery_n0().bind().await?;
             // // We initialize the Blobs protocol in-memory
@@ -356,7 +356,7 @@ async fn handler_mqtt(State(state): State<Statey>, body: Body) -> Result<Respons
 #[cfg(feature = "iroh-support")]
 
 async fn handler_iroh(State(state): State<Statey>, body: Body) -> Result<Response, StatusCode> {
-    if let Commands::IROH { node_id: _} = &state.args.cmd {
+    if let Commands::IROH { node_id: _ } = &state.args.cmd {
         let bodydata = body.collect().await.unwrap().to_bytes();
         debug!("Iroh handler received data: {:?}", bodydata);
 

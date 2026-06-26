@@ -1,11 +1,11 @@
+use clap::Parser;
+use iroh::endpoint::ConnectionError;
+use iroh::{Endpoint, SecretKey};
+use oxxy::EXAMPLE_ALPN;
 use std::process;
 use std::str::FromStr;
 use std::time::Duration;
-use clap::Parser;
-use iroh::{Endpoint, SecretKey};
-use iroh::endpoint::ConnectionError;
 use tracing::{debug, info, warn};
-use oxxy::EXAMPLE_ALPN;
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
@@ -16,7 +16,7 @@ struct Args {
         default_value = "http://loki-loki-gateway:80/loki/api/v1/push"
     )]
     loki_url: String,
-    
+
     #[arg(short, long)]
     shared_secret: Option<String>,
 }
@@ -28,20 +28,23 @@ async fn main() -> Result<(), anyhow::Error> {
     info!("ioxxy gateway starting up...");
 
     let secret = match args.shared_secret {
-        None => {SecretKey::generate(rand::rngs::OsRng)}
-        Some(val) => {match SecretKey::from_str(val.as_str()) {
-            Ok(val) => {val}
+        None => SecretKey::generate(rand::rngs::OsRng),
+        Some(val) => match SecretKey::from_str(val.as_str()) {
+            Ok(val) => val,
             Err(_) => {
                 info!("invalid secret key passed in, exiting");
                 process::exit(0x0100)
             }
-        }}
+        },
     };
 
     let endpoint = Endpoint::builder()
         .secret_key(secret)
         .alpns(vec![EXAMPLE_ALPN.to_vec()])
-        .discovery_local_network().discovery_n0().bind().await?;
+        .discovery_local_network()
+        .discovery_n0()
+        .bind()
+        .await?;
 
     // print this endpoint's node id
     let me = endpoint.node_id();
@@ -79,7 +82,7 @@ async fn main() -> Result<(), anyhow::Error> {
             }
         };
         let alpn = connecting.alpn().await?;
-            let conn = connecting.await?;
+        let conn = connecting.await?;
         let node_id = conn.remote_node_id()?;
         info!(
             "new connection from {node_id} with ALPN {}",
@@ -109,7 +112,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     println!("node {node_id} disconnected with an error: {closed:#}");
                 }
             })
-                .await;
+            .await;
             if res.is_err() {
                 println!("node {node_id} did not disconnect within 3 seconds");
             }
