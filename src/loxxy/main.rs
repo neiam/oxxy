@@ -380,7 +380,7 @@ async fn handler_iroh(State(state): State<Statey>, body: Body) -> Result<Respons
                     }
                 };
 
-                let message = format!("ep is saying 'hello!'");
+                let message = "ep is saying 'hello!'".to_string();
 
                 if let Err(e) = send.write_all(message.as_bytes()).await {
                     info!("Failed to write to stream: {}", e);
